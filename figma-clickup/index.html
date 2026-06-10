@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figma → ClickUp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F7F7F5;
+      --surface: #FFFFFF;
+      --border: #E4E4E0;
+      --border-strong: #C9C9C3;
+      --text-primary: #1A1A18;
+      --text-secondary: #6B6B65;
+      --text-muted: #9D9D96;
+      --accent: #6366F1;
+      --accent-hover: #4F52D4;
+      --accent-light: #EEF2FF;
+      --accent-text: #3730A3;
+      --success-bg: #F0FDF4;
+      --success-text: #166534;
+      --success-border: #BBF7D0;
+      --error-bg: #FEF2F2;
+      --error-text: #991B1B;
+      --error-border: #FECACA;
+      --warning-bg: #FFFBEB;
+      --warning-text: #92400E;
+      --warning-border: #FDE68A;
+      --info-bg: #EFF6FF;
+      --info-text: #1E40AF;
+      --info-border: #BFDBFE;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Layout */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-icon svg { width: 16px; height: 16px; }
+    .topbar-tag {
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--accent-light);
+      color: var(--accent-text);
+      padding: 3px 9px;
+      border-radius: 99px;
+    }
+
+    .main { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+
+    .page-title { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .page-sub { color: var(--text-secondary); margin-bottom: 28px; font-size: 14px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .card.locked { opacity: 0.45; pointer-events: none; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      color: var(--accent-text);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+    /* Form elements */
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .field:last-of-type { margin-bottom: 0; }
+    label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+    input, select {
+      height: 36px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 0 11px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: var(--surface);
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+    input::placeholder { color: var(--text-muted); }
+    .row { display: flex; gap: 12px; }
+    .row .field { flex: 1; }
+
+    /* Buttons */
+    .btn {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.15s;
+      border: none;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: transparent; border: 1px solid var(--border-strong); color: var(--text-primary); }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-lg { height: 42px; padding: 0 22px; font-size: 15px; }
+
+    /* Status messages */
+    .status {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 13px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .status svg { flex-shrink: 0; margin-top: 1px; }
+    .s-info    { background: var(--info-bg);    color: var(--info-text);    border: 1px solid var(--info-border); }
+    .s-success { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+    .s-error   { background: var(--error-bg);   color: var(--error-text);   border: 1px solid var(--error-border); }
+    .s-warning { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-border); }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    /* Comment filters + selection bar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .filters { display: flex; gap: 6px; }
+    .filter-btn {
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      border: 1px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+    }
+    .filter-btn:hover { background: var(--bg); }
+    .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .sel-actions { display: flex; align-items: center; gap: 8px; }
+    .sel-count { font-size: 13px; color: var(--text-secondary); }
+    .mini-btn {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .mini-btn:hover { background: var(--bg); }
+
+    /* Comment cards */
+    .comment-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; padding-right: 2px; }
+    .comment-list::-webkit-scrollbar { width: 5px; }
+    .comment-list::-webkit-scrollbar-track { background: transparent; }
+    .comment-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+    .ccard {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 13px;
+      display: flex;
+      gap: 11px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      user-select: none;
+    }
+    .ccard:hover { border-color: var(--border-strong); background: var(--bg); }
+    .ccard.selected { border-color: var(--accent); background: var(--accent-light); }
+
+    .checkbox {
+      width: 18px;
+      height: 18px;
+      border: 1.5px solid var(--border-strong);
+      border-radius: 5px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+    }
+    .ccard.selected .checkbox {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .cbody { flex: 1; min-width: 0; }
+    .ctext { font-size: 14px; color: var(--text-primary); line-height: 1.45; }
+    .cmeta {
+      margin-top: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      align-items: center;
+    }
+    .cmeta-item { display: flex; align-items: center; gap: 4px; }
+    .badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .badge-open     { background: var(--warning-bg); color: var(--warning-text); }
+    .badge-resolved { background: var(--success-bg); color: var(--success-text); }
+
+    /* Results */
+    .result-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .result-item:last-child { border-bottom: none; }
+    .result-name { flex: 1; min-width: 0; }
+    .result-title { color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .result-sub   { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+    .result-link  { font-size: 12px; color: var(--accent); white-space: nowrap; text-decoration: none; display: flex; align-items: center; gap: 3px; }
+    .result-link:hover { text-decoration: underline; }
+
+    /* Spinner */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty { text-align: center; padding: 28px 16px; color: var(--text-muted); font-size: 14px; }
+
+    /* Responsive */
+    @media (max-width: 520px) {
+      .row { flex-direction: column; }
+      .main { padding: 20px 16px 48px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    Figma → ClickUp
+  </div>
+  <span class="topbar-tag">Sync tool</span>
+</nav>
+
+<main class="main">
+  <h1 class="page-title">Comment sync</h1>
+  <p class="page-sub">Fetch comments from a Figma file and create them as tasks in ClickUp.</p>
+
+  <!-- Step 1: Figma file -->
+  <div class="card" id="card1">
+    <div class="card-header">
+      <div class="step-num">1</div>
+      <div class="card-title">Figma file</div>
+    </div>
+    <div class="field">
+      <label>Figma file URL</label>
+      <input type="text" id="figmaUrl" placeholder="https://figma.com/design/abc123/My-File" />
+    </div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <button class="btn btn-primary" id="fetchBtn" onclick="fetchComments()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7a6 6 0 1 0 6-6 6 6 0 0 0-4.24 1.76M1 2.5V5h2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Fetch comments
+      </button>
+      <span id="fetchHint" style="font-size:13px;color:var(--text-muted)">Paste a Figma file URL above</span>
+    </div>
+    <div id="fetchStatus"></div>
+
+    <!-- Comments section -->
+    <div id="commentSection" style="display:none">
+      <div class="divider"></div>
+      <div class="toolbar">
+        <div class="filters">
+          <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+          <button class="filter-btn" onclick="setFilter('open',this)">Open</button>
+          <button class="filter-btn" onclick="setFilter('resolved',this)">Resolved</button>
+        </div>
+        <div class="sel-actions">
+          <span class="sel-count" id="selCount">0 selected</span>
+          <button class="mini-btn" onclick="selectAll()">Select all</button>
+          <button class="mini-btn" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+      <div class="comment-list" id="commentList"></div>
+    </div>
+  </div>
+
+  <!-- Step 2: ClickUp destination -->
+  <div class="card locked" id="card2">
+    <div class="card-header">
+      <div class="step-num">2</div>
+      <div class="card-title">ClickUp destination</div>
+    </div>
+    <div class="field">
+      <label>ClickUp list ID or URL</label>
+      <input type="text" id="clickupList" placeholder="901234567 or https://app.clickup.com/..." />
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Default priority</label>
+        <select id="priority">
+          <option value="">No priority</option>
+          <option value="1">Urgent</option>
+          <option value="2">High</option>
+          <option value="3" selected>Normal</option>
+          <option value="4">Low</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Tag (optional)</label>
+        <input type="text" id="tagInput" placeholder="figma-feedback" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Resolve Figma comment when task is created?</label>
+      <select id="resolveOnCreate">
+        <option value="no">No — leave open in Figma</option>
+        <option value="yes">Yes — mark as resolved in Figma</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Step 3: Create -->
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+    <button class="btn btn-primary btn-lg" id="createBtn" onclick="createTasks()" disabled>
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Create tasks in ClickUp
+    </button>
+    <span id="createHint" style="font-size:13px;color:var(--text-muted)">Select comments above first</span>
+  </div>
+
+  <div id="createResults"></div>
+</main>
+
+<script>
+  let allComments = [];
+  let selected = new Set();
+  let currentFilter = 'all';
+  let currentFileKey = '';
+
+  function extractFileKey(input) {
+    const m = input.match(/figma\.com\/(?:design|file|proto)\/([a-zA-Z0-9]+)/);
+    if (m) return m[1];
+    if (/^[a-zA-Z0-9]{10,}$/.test(input.trim())) return input.trim();
+    return null;
+  }
+
+  function extractListId(input) {
+    const m = input.match(/\/(\d{6,})/);
+    if (m) return m[1];
+    if (/^\d{6,}$/.test(input.trim())) return input.trim();
+    return null;
+  }
+
+  async function fetchComments() {
+    const urlInput = document.getElementById('figmaUrl').value.trim();
+    const btn = document.getElementById('fetchBtn');
+    const status = document.getElementById('fetchStatus');
+    const hint = document.getElementById('fetchHint');
+
+    const fileKey = extractFileKey(urlInput);
+    if (!fileKey) {
+      status.innerHTML = statusHtml('error', 'Could not read a file key from that URL. Paste the full Figma file URL from your browser.');
+      return;
+    }
+
+    currentFileKey = fileKey;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Fetching…`;
+    hint.textContent = '';
+    status.innerHTML = statusHtml('info', 'Fetching comments from Figma…');
+
+    try {
+      const res = await fetch(`/api/figma-comments?fileKey=${fileKey}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        status.innerHTML = statusHtml('error', data.error || 'Failed to fetch comments.');
+        return;
+      }
+
+      allComments = data.comments || [];
+
+      if (allComments.length === 0) {
+        status.innerHTML = statusHtml('warning', 'No comments found on this file.');
+        return;
+      }
+
+      status.innerHTML = statusHtml('success', `Found ${allComments.length} comment${allComments.length !== 1 ? 's' : ''}.`);
+      document.getElementById('card2').classList.remove('locked');
+      renderComments();
+    } catch (err) {
+      status.innerHTML = statusHtml('error', `Network error: ${err.message}`);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7a6 6 0 1 0 6-6 6 6 0 0 0-4.24 1.76M1 2.5V5h2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Fetch comments`;
+  }
+
+  function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderComments();
+  }
+
+  function visibleComments() {
+    if (currentFilter === 'open') return allComments.filter(c => !c.resolved_at);
+    if (currentFilter === 'resolved') return allComments.filter(c => !!c.resolved_at);
+    return allComments;
+  }
+
+  function renderComments() {
+    const list = document.getElementById('commentList');
+    const section = document.getElementById('commentSection');
+    section.style.display = 'block';
+    const visible = visibleComments();
+
+    if (!visible.length) {
+      list.innerHTML = `<div class="empty">No comments match this filter.</div>`;
+      updateSelCount();
+      return;
+    }
+
+    list.innerHTML = visible.map(c => {
+      const isSel = selected.has(c.id);
+      const resolved = !!c.resolved_at;
+      const author = c.user?.handle || c.user?.name || 'Unknown';
+      const date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+      return `<div class="ccard ${isSel ? 'selected' : ''}" onclick="toggle('${esc(c.id)}')" role="checkbox" aria-checked="${isSel}" tabindex="0">
+        <div class="checkbox">${isSel ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}</div>
+        <div class="cbody">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div class="ctext">${esc(c.message)}</div>
+            <span class="badge ${resolved ? 'badge-resolved' : 'badge-open'}" style="flex-shrink:0">${resolved ? 'Resolved' : 'Open'}</span>
+          </div>
+          <div class="cmeta">
+            <span class="cmeta-item"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 10.5c0-2.21 2.01-4 4.5-4s4.5 1.79 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ${esc(author)}</span>
+            ${date ? `<span class="cmeta-item"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ${date}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    updateSelCount();
+  }
+
+  function toggle(id) {
+    selected.has(id) ? selected.delete(id) : selected.add(id);
+    renderComments();
+    updateCreateBtn();
+  }
+
+  function selectAll() { visibleComments().forEach(c => selected.add(c.id)); renderComments(); updateCreateBtn(); }
+  function clearAll()  { visibleComments().forEach(c => selected.delete(c.id)); renderComments(); updateCreateBtn(); }
+
+  function updateSelCount() {
+    document.getElementById('selCount').textContent = `${selected.size} selected`;
+  }
+
+  function updateCreateBtn() {
+    const btn = document.getElementById('createBtn');
+    const hint = document.getElementById('createHint');
+    btn.disabled = selected.size === 0;
+    hint.textContent = selected.size === 0 ? 'Select comments above first' : `${selected.size} comment${selected.size !== 1 ? 's' : ''} → tasks`;
+  }
+
+  async function createTasks() {
+    const listInput = document.getElementById('clickupList').value.trim();
+    const priority = document.getElementById('priority').value;
+    const tag = document.getElementById('tagInput').value.trim();
+    const resolveOnCreate = document.getElementById('resolveOnCreate').value === 'yes';
+    const btn = document.getElementById('createBtn');
+    const results = document.getElementById('createResults');
+
+    if (!listInput) {
+      results.innerHTML = `<div class="card">${statusHtml('error', 'Please enter a ClickUp list ID or URL.')}</div>`;
+      return;
+    }
+
+    const listId = extractListId(listInput) || listInput;
+    const toCreate = allComments.filter(c => selected.has(c.id));
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Creating…`;
+    results.innerHTML = '';
+
+    const tasks = toCreate.map(c => {
+      const author = c.user?.handle || c.user?.name || 'Unknown';
+      const figmaLink = currentFileKey ? `https://figma.com/design/${currentFileKey}?comment-id=${c.id}` : '';
+      return {
+        commentId: c.id,
+        name: c.message.length > 80 ? c.message.slice(0, 77) + '…' : c.message,
+        description: `**Figma comment** by ${author}\n\n${c.message}${figmaLink ? `\n\n[View comment in Figma](${figmaLink})` : ''}`,
+        priority: priority ? parseInt(priority) : null,
+        tags: tag ? [tag.toLowerCase().replace(/\s+/g, '-')] : []
+      };
+    });
+
+    try {
+      const res = await fetch('/api/clickup-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listId, tasks })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        results.innerHTML = `<div class="card">${statusHtml('error', data.error || 'Failed to create tasks.')}</div>`;
+        return;
+      }
+
+      const taskResults = data.results || [];
+      const successes = taskResults.filter(r => r.success);
+      const failures  = taskResults.filter(r => !r.success);
+
+      // Optionally resolve Figma comments for successful tasks
+      if (resolveOnCreate && successes.length && currentFileKey) {
+        for (const s of successes) {
+          await fetch('/api/figma-resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileKey: currentFileKey, commentId: s.commentId })
+          }).catch(() => {});
+        }
+      }
+
+      renderResults(successes, failures);
+      selected.clear();
+      renderComments();
+      updateCreateBtn();
+    } catch (err) {
+      results.innerHTML = `<div class="card">${statusHtml('error', `Network error: ${err.message}`)}</div>`;
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Create tasks in ClickUp`;
+  }
+
+  function renderResults(successes, failures) {
+    const results = document.getElementById('createResults');
+    const total = successes.length + failures.length;
+
+    let html = `<div class="card">
+      <div class="card-header" style="margin-bottom:12px">
+        <div class="step-num" style="background:#F0FDF4;color:#166534">✓</div>
+        <div class="card-title">${successes.length} of ${total} tasks created</div>
+      </div>`;
+
+    if (successes.length) {
+      html += successes.map(r => `
+        <div class="result-item">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="7" stroke="#16a34a" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="result-name">
+            <div class="result-title">${esc(r.taskName)}</div>
+            <div class="result-sub">Task ID: ${r.taskId}</div>
+          </div>
+          ${r.taskUrl ? `<a href="${esc(r.taskUrl)}" class="result-link" target="_blank" rel="noopener">Open <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 9L9 2M9 2H5M9 2v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ''}
+        </div>`).join('');
+    }
+
+    if (failures.length) {
+      html += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">`;
+      html += failures.map(r => `
+        <div class="result-item">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="7" stroke="#dc2626" stroke-width="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#dc2626" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <div class="result-name">
+            <div class="result-title" style="color:var(--text-secondary)">${esc(allComments.find(c => c.id === r.commentId)?.message?.slice(0,60) || 'Unknown comment')}</div>
+            <div class="result-sub" style="color:var(--error-text)">${esc(r.error)}</div>
+          </div>
+        </div>`).join('');
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    results.innerHTML = html;
+  }
+
+  function statusHtml(type, msg) {
+    const icons = {
+      info:    `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7v4M7.5 5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+      success: `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 7.5l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      error:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 5v3.5M7.5 10v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+      warning: `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2L14 13H1L7.5 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7.5 6v3M7.5 10.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`
+    };
+    return `<div class="status s-${type}">${icons[type]} ${esc(msg)}</div>`;
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
