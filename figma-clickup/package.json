@@ -1,0 +1,9 @@
+{
+  "name": "figma-clickup-sync",
+  "version": "1.0.0",
+  "description": "Sync Figma comments to ClickUp tasks",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
