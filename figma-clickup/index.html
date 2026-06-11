@@ -406,9 +406,13 @@ function renderMain() {
         <div style="font-size:12px;color:var(--text-muted)">List: ${esc(p.clickupList)}</div>
       </div>
       <div class="row">
-        <div class="field">
-          <label>Assignee (email address)</label>
-          <input type="text" id="assigneeInput" placeholder="e.g. dom@visionsdesign.co.uk" />
+        <div class="field" style="position:relative">
+          <label>Assignee</label>
+          <input type="text" id="assigneeInput" placeholder="Search team member…" autocomplete="off"
+            oninput="filterMembers(this.value)"
+            onfocus="showMemberDropdown()"
+            onblur="setTimeout(hideMemberDropdown, 200)" />
+          <div id="memberDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:50;max-height:180px;overflow-y:auto;margin-top:2px"></div>
         </div>
         <div class="field">
           <label>Start date (optional)</label>
@@ -505,7 +509,8 @@ function renderCommentList() {
       <div class="cbody">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div class="ctext">${esc(c.message)}</div>
-          <div style="display:flex;gap:4px;flex-shrink:0">
+          <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+            ${isSynced && !resolved ? `<button onclick="event.stopPropagation();resolveInFigma('${esc(c.id)}')" id="resolve-btn-${esc(c.id)}" style="font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--success-border);background:var(--success-bg);color:var(--success-text);cursor:pointer;white-space:nowrap;font-family:inherit">Resolve in Figma</button>` : ''}
             ${isSynced ? `<span class="badge badge-synced">Synced</span>` : ''}
             <span class="badge ${resolved ? 'badge-resolved' : 'badge-open'}">${resolved ? 'Resolved' : 'Open'}</span>
           </div>
@@ -644,7 +649,7 @@ async function createTasks() {
       description: `**Figma comment** by ${author}\n\n${c.message}${figmaLink ? `\n\n[View in Figma](${figmaLink})` : ''}`,
       priority: priority ? parseInt(priority) : null,
       tags: tag ? [tag.toLowerCase().replace(/\s+/g, '-')] : [],
-      assignee: assignee || null,
+      assigneeId: selectedMemberId || null,
       startDate: startDate ? new Date(startDate).getTime() : null,
       dueDate: dueDate ? new Date(dueDate).getTime() : null
     };
@@ -727,8 +732,97 @@ function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Close modal on overlay click
-document.getElementById('projectModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+// ─── Member autocomplete ──────────────────────────────────────────────────────
+let allMembers = [];
+let selectedMemberId = null;
+
+async function loadMembers() {
+  if (allMembers.length) return;
+  try {
+    const res = await fetch('/api/clickup-members');
+    const data = await res.json();
+    allMembers = data.members || [];
+  } catch {}
+}
+
+function showMemberDropdown() {
+  loadMembers().then(() => filterMembers(document.getElementById('assigneeInput')?.value || ''));
+}
+
+function hideMemberDropdown() {
+  const dd = document.getElementById('memberDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function filterMembers(query) {
+  const dd = document.getElementById('memberDropdown');
+  if (!dd) return;
+  const q = query.toLowerCase().trim();
+  const matches = q
+    ? allMembers.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+    : allMembers;
+
+  if (!matches.length) { dd.style.display = 'none'; return; }
+
+  dd.style.display = 'block';
+  dd.innerHTML = matches.slice(0, 8).map(m => `
+    <div onclick="selectMember(${m.id}, '${esc(m.name)}', '${esc(m.email)}')"
+      style="display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-light);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">
+        ${esc(m.name.charAt(0).toUpperCase())}
+      </div>
+      <div>
+        <div style="font-weight:500;color:var(--text-primary)">${esc(m.name)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${esc(m.email)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function selectMember(id, name, email) {
+  selectedMemberId = id;
+  const input = document.getElementById('assigneeInput');
+  if (input) input.value = name + (email ? ' — ' + email : '');
+  hideMemberDropdown();
+}
+
+// ─── Resolve in Figma ─────────────────────────────────────────────────────────
+async function resolveInFigma(commentId) {
+  const p = projects.find(x => x.id === activeProjectId);
+  if (!p) return;
+  const s = getProjectState(p.id);
+  const fileKey = extractFileKey(p.figmaUrl);
+  if (!fileKey) { alert('Could not extract Figma file key for this project.'); return; }
+
+  const btn = document.getElementById('resolve-btn-' + commentId);
+  if (btn) { btn.textContent = 'Resolving…'; btn.disabled = true; }
+
+  try {
+    const res = await fetch('/api/figma-resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileKey, commentId })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert('Failed to resolve in Figma: ' + (data.error || 'Unknown error'));
+      if (btn) { btn.textContent = 'Resolve in Figma'; btn.disabled = false; }
+      return;
+    }
+
+    // Mark as resolved locally so the button disappears
+    const comment = s.allComments.find(c => c.id === commentId);
+    if (comment) comment.resolved_at = new Date().toISOString();
+    saveProjects();
+    renderCommentList();
+  } catch (err) {
+    alert('Network error: ' + err.message);
+    if (btn) { btn.textContent = 'Resolve in Figma'; btn.disabled = false; }
+  }
+}
+
+
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 renderSidebar();
