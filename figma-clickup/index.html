@@ -407,8 +407,12 @@ function renderMain() {
       </div>
       <div class="row">
         <div class="field">
-          <label>Assignee (ClickUp username or email)</label>
+          <label>Assignee (email address)</label>
           <input type="text" id="assigneeInput" placeholder="e.g. dom@visionsdesign.co.uk" />
+        </div>
+        <div class="field">
+          <label>Start date (optional)</label>
+          <input type="date" id="startDateInput" />
         </div>
         <div class="field">
           <label>Due date (optional)</label>
@@ -614,6 +618,7 @@ async function createTasks() {
   const s = getProjectState(p.id);
 
   const assignee = document.getElementById('assigneeInput')?.value.trim() || '';
+  const startDate = document.getElementById('startDateInput')?.value || '';
   const dueDate = document.getElementById('dueDateInput')?.value || '';
   const priority = document.getElementById('priorityInput')?.value || '';
   const tag = document.getElementById('tagInput')?.value.trim() || '';
@@ -640,6 +645,7 @@ async function createTasks() {
       priority: priority ? parseInt(priority) : null,
       tags: tag ? [tag.toLowerCase().replace(/\s+/g, '-')] : [],
       assignee: assignee || null,
+      startDate: startDate ? new Date(startDate).getTime() : null,
       dueDate: dueDate ? new Date(dueDate).getTime() : null
     };
     return body;
