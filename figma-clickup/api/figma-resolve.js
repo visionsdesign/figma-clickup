@@ -11,7 +11,6 @@ export default async function handler(req, res) {
   if (!fileKey || !commentId) return res.status(400).json({ error: 'Missing fileKey or commentId.' });
 
   try {
-    // Correct way to resolve a Figma comment is PUT with resolved=true
     const response = await fetch(`https://api.figma.com/v1/files/${fileKey}/comments/${commentId}`, {
       method: 'PUT',
       headers: {
@@ -21,9 +20,12 @@ export default async function handler(req, res) {
       body: JSON.stringify({ resolved: true })
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: err.message || err.err || response.statusText });
+      let errMsg = response.statusText;
+      try { errMsg = JSON.parse(responseText).message || errMsg; } catch {}
+      return res.status(response.status).json({ error: errMsg });
     }
 
     res.status(200).json({ success: true });
