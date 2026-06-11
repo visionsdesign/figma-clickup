@@ -10,16 +10,36 @@ export default async function handler(req, res) {
   const { fileKey, commentId } = req.body || {};
   if (!fileKey || !commentId) return res.status(400).json({ error: 'Missing fileKey or commentId.' });
 
-  // Try the correct Figma resolve endpoint
-  // Figma API: POST /v1/files/:file_key/comments/:comment_id/reactions is not resolve
-  // The correct way is PUT /v1/files/:file_key/comments/:comment_id with { resolved: true }
-  // BUT this only works with OAuth tokens, not personal access tokens on some scopes
-  // We also try the legacy approach just in case
+  console.log('Attempting to resolve comment:', { fileKey, commentId });
 
-  const url = `https://api.figma.com/v1/files/${fileKey}/comments/${commentId}`;
-
+  // First, fetch all comments to find the exact internal ID Figma uses
   try {
-    const response = await fetch(url, {
+    const listRes = await fetch(`https://api.figma.com/v1/files/${fileKey}/comments`, {
+      headers: { 'X-Figma-Token': token }
+    });
+    const listData = await listRes.json();
+    const allComments = listData.comments || [];
+
+    console.log('All comment IDs from Figma:', allComments.map(c => ({ id: c.id, client_meta: c.client_meta })));
+
+    // Find matching comment — try exact match first, then string comparison
+    const match = allComments.find(c =>
+      String(c.id) === String(commentId) ||
+      c.id === commentId
+    );
+
+    if (!match) {
+      console.log('Comment not found. Available IDs:', allComments.map(c => c.id));
+      return res.status(404).json({
+        error: `Comment ID "${commentId}" not found in file. Available IDs: ${allComments.slice(0,5).map(c=>c.id).join(', ')}`,
+        availableIds: allComments.map(c => c.id)
+      });
+    }
+
+    const resolvedId = match.id;
+    console.log('Found comment, resolving with ID:', resolvedId);
+
+    const resolveRes = await fetch(`https://api.figma.com/v1/files/${fileKey}/comments/${resolvedId}`, {
       method: 'PUT',
       headers: {
         'X-Figma-Token': token,
@@ -28,24 +48,19 @@ export default async function handler(req, res) {
       body: JSON.stringify({ resolved: true })
     });
 
-    const responseText = await response.text();
-    let responseJson = {};
-    try { responseJson = JSON.parse(responseText); } catch {}
+    const resolveText = await resolveRes.text();
+    console.log('Resolve response status:', resolveRes.status);
+    console.log('Resolve response body:', resolveText);
 
-    // Log full details so we can debug
-    console.log('Figma resolve status:', response.status);
-    console.log('Figma resolve body:', responseText);
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: responseJson.message || responseJson.err || response.statusText,
-        statusCode: response.status,
-        detail: responseText
-      });
+    if (!resolveRes.ok) {
+      let errMsg = resolveRes.statusText;
+      try { errMsg = JSON.parse(resolveText).message || JSON.parse(resolveText).err || errMsg; } catch {}
+      return res.status(resolveRes.status).json({ error: errMsg, detail: resolveText });
     }
 
     res.status(200).json({ success: true });
   } catch (err) {
+    console.error('Resolve error:', err.message);
     res.status(500).json({ error: err.message });
   }
 }
